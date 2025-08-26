@@ -141,4 +141,18 @@ The models are evaluated on the test set, and their performance is measured by R
 *   **CNN-BiLSTM Test RMSE**: The final RMSE achieved by the CNN-BiLSTM model on the test data.
 *   **Naive Forecasting Test RMSE**: The RMSE of the baseline model, which provides a benchmark for evaluating the effectiveness of the deep learning models.
 
-The final printout compares these three RMSE values, providing a clear summary of which model performed best on the forecasting task. The results are divided by 1000 in the final printout, which appears to be an error, as the metric is already in kW. The values should be interpreted directly as kW.
+#### Evaluating Naive Forecasting Technique (Baseline) (in kW)
+- Naive Forecasting Test RMSE: 1.7866 kW
+
+#### Final Results Comparison (in kW)
+- BiLSTM Test RMSE: 1.4822 kW
+- CNN-BiLSTM Test RMSE: 1.4673 kW
+- Naive Forecasting Test RMSE: 1.7866 kW (Baseline)
+
+#### Results Table
+
+| Model      | Results (in kW) | Paper Result (in kW) |
+| ---------- | --------------- | -------------------- |
+| Naive      | 1.787           | 1.787                |
+| BiLSTM     | 1.4822          | 1.501                |
+| CNN-BiLSTM | 1.4673          | 1.541                |
