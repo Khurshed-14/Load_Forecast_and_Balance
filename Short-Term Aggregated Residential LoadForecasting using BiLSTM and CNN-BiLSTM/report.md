@@ -29,7 +29,6 @@ graph TD
         N[Naive Baseline] --> M
         M --> O[Compare Results]
     end
-end
 ```
 
 The core methodology involves predicting 24 hours of future electricity load (`P` in kW) based on the preceding 24 hours of load data. The overall workflow is as follows:
