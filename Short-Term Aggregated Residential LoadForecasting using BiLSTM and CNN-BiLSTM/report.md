@@ -96,7 +96,6 @@ graph TD
     B --> C{Select Last Time Step<br>Output: &#40;batch, 400&#41;};
     C --> D{Dense Layer<br>ReLU, 200 units};
     D --> E[Output Layer<br>24 units];
-end
 ```
 
 1.  **Input Layer**: Takes a sequence of shape `(batch_size, 24, 1)`.
