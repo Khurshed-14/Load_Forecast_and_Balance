@@ -92,8 +92,8 @@ The key hyperparameters used for the models and training process are derived fro
 
 ```mermaid
 graph TD
-    A[Input<br>(batch, 24, 1)] --> B{BiLSTM Layer<br>hidden_size=200};
-    B --> C{Select Last Time Step<br>Output: (batch, 400)};
+    A[Input<br>&#40;batch, 24, 1&#41;] --> B{BiLSTM Layer<br>hidden_size=200};
+    B --> C{Select Last Time Step<br>Output: &#40;batch, 400&#41;};
     C --> D{Dense Layer<br>ReLU, 200 units};
     D --> E[Output Layer<br>24 units];
 end
@@ -111,7 +111,7 @@ end
 ```mermaid
 graph TD
     subgraph "CNN Feature Extractor"
-        A[Input<br>(batch, 24, 1)] --> B{Permute<br>(batch, 1, 24)};
+        A[Input<br>&#40;batch, 24, 1&#41;] --> B{Permute<br>&#40;batch, 1, 24&#41;};
         B --> C{1D CNN<br>64 filters, kernel=3};
         C --> D{Max Pooling<br>kernel=2};
         D --> E{Flatten};
@@ -124,7 +124,6 @@ graph TD
         H --> I{Dense Layer<br>ReLU, 200 units};
         I --> J[Output Layer<br>24 units];
     end
-end
 ```
 
 This model uses a CNN to extract features from the input sequence before feeding it to the BiLSTM.
