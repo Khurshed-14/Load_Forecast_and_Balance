@@ -29,7 +29,6 @@ graph TD
         N[Naive Baseline] --> M
         M --> O[Compare Results]
     end
-end
 ```
 
 The core methodology involves predicting 24 hours of future electricity load (`P` in kW) based on the preceding 24 hours of load data. The overall workflow is as follows:
@@ -93,11 +92,10 @@ The key hyperparameters used for the models and training process are derived fro
 
 ```mermaid
 graph TD
-    A[Input<br>(batch, 24, 1)] --> B{BiLSTM Layer<br>hidden_size=200};
-    B --> C{Select Last Time Step<br>Output: (batch, 400)};
+    A[Input<br>&#40;batch, 24, 1&#41;] --> B{BiLSTM Layer<br>hidden_size=200};
+    B --> C{Select Last Time Step<br>Output: &#40;batch, 400&#41;};
     C --> D{Dense Layer<br>ReLU, 200 units};
     D --> E[Output Layer<br>24 units];
-end
 ```
 
 1.  **Input Layer**: Takes a sequence of shape `(batch_size, 24, 1)`.
@@ -112,7 +110,7 @@ end
 ```mermaid
 graph TD
     subgraph "CNN Feature Extractor"
-        A[Input<br>(batch, 24, 1)] --> B{Permute<br>(batch, 1, 24)};
+        A[Input<br>&#40;batch, 24, 1&#41;] --> B{Permute<br>&#40;batch, 1, 24&#41;};
         B --> C{1D CNN<br>64 filters, kernel=3};
         C --> D{Max Pooling<br>kernel=2};
         D --> E{Flatten};
@@ -125,7 +123,6 @@ graph TD
         H --> I{Dense Layer<br>ReLU, 200 units};
         I --> J[Output Layer<br>24 units];
     end
-end
 ```
 
 This model uses a CNN to extract features from the input sequence before feeding it to the BiLSTM.
@@ -144,4 +141,18 @@ The models are evaluated on the test set, and their performance is measured by R
 *   **CNN-BiLSTM Test RMSE**: The final RMSE achieved by the CNN-BiLSTM model on the test data.
 *   **Naive Forecasting Test RMSE**: The RMSE of the baseline model, which provides a benchmark for evaluating the effectiveness of the deep learning models.
 
-The final printout compares these three RMSE values, providing a clear summary of which model performed best on the forecasting task. The results are divided by 1000 in the final printout, which appears to be an error, as the metric is already in kW. The values should be interpreted directly as kW.
+#### Evaluating Naive Forecasting Technique (Baseline) (in kW)
+- Naive Forecasting Test RMSE: 1.7866 kW
+
+#### Final Results Comparison (in kW)
+- BiLSTM Test RMSE: 1.4822 kW
+- CNN-BiLSTM Test RMSE: 1.4673 kW
+- Naive Forecasting Test RMSE: 1.7866 kW (Baseline)
+
+#### Results Table
+
+| Model      | Results (in kW) | Paper Result (in kW) |
+| ---------- | --------------- | -------------------- |
+| Naive      | 1.787           | 1.787                |
+| BiLSTM     | 1.4822          | 1.501                |
+| CNN-BiLSTM | 1.4673          | 1.541                |
