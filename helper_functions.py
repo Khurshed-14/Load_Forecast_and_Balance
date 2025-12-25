@@ -4,6 +4,7 @@ import torch.nn as nn
 import os
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import matplotlib.pyplot as plt
 
 
 # Validation helper function
@@ -63,6 +64,10 @@ def train_model(
     if not os.path.exists(os.path.dirname(save_path)) and os.path.dirname(save_path):
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
+
+    train_history = []
+    val_history = []
+    
     # --- Training Loop ---
     for epoch in range(1, epochs + 1):
         model.train()
@@ -85,6 +90,9 @@ def train_model(
         # --- Validation and Reporting ---
         avg_train_loss = total_loss / len(train_loader)
         val_loss = validate(model, val_loader, criterion, device)
+
+        train_history.append(avg_train_loss)
+        val_history.append(val_loss)
 
         scheduler.step(val_loss)
         current_lr = optimizer.param_groups[0]['lr']
@@ -117,6 +125,18 @@ def train_model(
     # --- Cleanup ---
     print(f"\nLoading best model from {save_path} (Val Loss: {best_val_loss:.6f})")
     model.load_state_dict(torch.load(save_path, map_location=device))
+    
+    # ---- Learning Curve Plot ----
+    plt.figure(figsize=(8, 5))
+    plt.plot(train_history, label='Train Loss')
+    plt.plot(val_history, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Learning Curve MultiScale Forecasting Network')
+    plt.legend()
+    curve_path = save_path + "_learning_curve.png"
+    plt.savefig(curve_path, dpi=200)
+    plt.close()
     
     print("Training complete. TensorBoard logs saved.")
 
