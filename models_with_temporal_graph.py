@@ -269,13 +269,13 @@ class GlobalLocalForecasting(nn.Module):
 
 class GLFN_TC_Linear(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
-                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
+                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5,dilation=3,kernel_size=7):
         super().__init__()
         self.graph_learn = TemporalGraphLearning(hidden_dim, dropout=dropout_gcn)
         
         # Use the FIXED TemporalConv (from previous step)
         self.temporal_conv = TemporalConv(N, T_in, hidden_dim, 
-                                          dilation=3, dropout=dropout_temporal)
+                                          dilation=dilation, dropout=dropout_temporal, kernel_size=kernel_size)
         
         # Use the FIXED DenselyResidualGCN (from previous step)
         self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim, 
