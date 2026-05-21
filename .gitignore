@@ -1,3 +1,17 @@
 load/
 Short-Term Aggregated Residential LoadForecasting using BiLSTM and CNN-BiLSTM/data/
 GCN/
+load_venv/
+Models/
+runs/
+__pycache__/
+CSE498R_Supervisor_Fixes/
+Final_Metrics/
+Final_Metrics_with_raw_data/
+Final_Run/
+Paper_Run/
+Paper_Runs/
+Test_Metrics/
+TR_GNN_AT/
+TR_GNN_ISO_NE/
+Trial_Run/
