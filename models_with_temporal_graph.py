@@ -300,109 +300,75 @@ class GLFN_TC_Linear(nn.Module):
 
 
 class GLFN_TC_Attention(nn.Module):
-    def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
-                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
+    def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
+                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
+                 GCN_Layer=5, kernel_size=7, dilation=3):          
         super().__init__()
         self.graph_learn = TemporalGraphLearning(hidden_dim, dropout=dropout_gcn)
-        self.temporal_conv = TemporalConv(N, T_in, hidden_dim, 
-                                          dilation=3, dropout=dropout_temporal)
-        self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim, 
+        self.temporal_conv = TemporalConv(N, T_in, hidden_dim,
+                                          kernel_size=kernel_size, 
+                                          dilation=dilation,        
+                                          dropout=dropout_temporal)
+        self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim,
                                             dropout=dropout_gcn, layers=GCN_Layer)
-        
-        # Update Init Args
         self.forecaster = AttentionForecasting(
-            N=N, # <--- Added N
-            T_in=T_in, # <--- Added T_in
-            T_out=T_out, 
-            d_model=hidden_dim, 
-            dropout=dropout_forecast
-        )
-
-    def forward(self, X): 
-        H = self.temporal_conv(X)
-        A = self.graph_learn(H)
-        H = self.dense_gcn(H, A)
-        # Update Forward Pass
-        Y_hat = self.forecaster(X, H) # Pass Raw X + Hidden H
-        return Y_hat, A
-    
-
-class GLFN_TC_MultiScale(nn.Module):
-    def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
-                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
-        super().__init__()
-        
-        # Temporal extraction remains the same
-        self.temporal_conv = TemporalConv(N, T_in, hidden_dim, 
-                                          dilation=3, dropout=dropout_temporal)
-        
-        # CHANGE: Now takes hidden_dim instead of N, d
-        self.graph_learn = TemporalGraphLearning(hidden_dim, dropout=dropout_gcn)
-        
-        # GCN remains the same - it already supports batched adjacency (B,N,N)
-        self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim, 
-                                            dropout=dropout_gcn, layers=GCN_Layer)
-        
-        self.forecaster = MultiScaleForecasting(
-            N=N, T_in=T_in, T_out=T_out, 
+            N=N, T_in=T_in, T_out=T_out,
             d_model=hidden_dim, dropout=dropout_forecast
         )
 
-    def forward(self, X):  # X: (B, N, T_in)
-        # 1. Extract temporal features → these contain time-conditioned info
-        H = self.temporal_conv(X)  # (B, N, hidden_dim)
-        
-        # 2. Learn dynamic graph based on current temporal state
-        #    This is the key change: A is now (B, N, N) and varies per sample
+    def forward(self, X):
+        H = self.temporal_conv(X)
         A = self.graph_learn(H)
-        
-        # 3. Apply GCN with the dynamic graph
-        #    PyTorch automatically handles batch matrix multiply: (B,N,N) @ (B,N,D)
         H = self.dense_gcn(H, A)
-        
-        # 4. Final forecast
         Y_hat = self.forecaster(X, H)
         return Y_hat, A
-    
 
-class GLFN_TC_GlobalLocal(nn.Module):
-    """
-    Graph Learning + Temporal Convolution + Dense Residual GCN + Global/Local Forecasting
-    """
-    def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
-                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
+
+class GLFN_TC_MultiScale(nn.Module):
+    def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
+                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
+                 GCN_Layer=5, kernel_size=7, dilation=3):          
         super().__init__()
-        
+        self.temporal_conv = TemporalConv(N, T_in, hidden_dim,
+                                          kernel_size=kernel_size,  
+                                          dilation=dilation,        
+                                          dropout=dropout_temporal)
         self.graph_learn = TemporalGraphLearning(hidden_dim, dropout=dropout_gcn)
-        
-        # Use the Corrected TemporalConv
-        self.temporal_conv = TemporalConv(N, T_in, hidden_dim, 
-                                          dilation=3, dropout=dropout_temporal)
-        
-        # Use the Corrected DenseGCN
-        self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim, 
+        self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim,
                                             dropout=dropout_gcn, layers=GCN_Layer)
-        
-        # NEW: Updated GlobalLocal Forecaster
-        self.forecaster = GlobalLocalForecasting(
-            N=N,            # <--- Passed N
-            T_in=T_in,      # <--- Passed T_in
-            T_out=T_out,
-            d_model=hidden_dim,
-            dropout=dropout_forecast,
+        self.forecaster = MultiScaleForecasting(
+            N=N, T_in=T_in, T_out=T_out,
+            d_model=hidden_dim, dropout=dropout_forecast
         )
 
-    def forward(self, X):  # X: (B, N, T_in)
-        # 1. Temporal Features
-        H = self.temporal_conv(X) # (B, N, hidden_dim)
-        
-        # 2. Graph Structure
+    def forward(self, X):
+        H = self.temporal_conv(X)
         A = self.graph_learn(H)
-        
-        # 3. Spatial Mixing
-        H = self.dense_gcn(H, A)  # (B, N, hidden_dim)
-        
-        # 4. Forecast (Pass BOTH Raw X and Processed H)
+        H = self.dense_gcn(H, A)
         Y_hat = self.forecaster(X, H)
-        
+        return Y_hat, A
+
+
+class GLFN_TC_GlobalLocal(nn.Module):
+    def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
+                 dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
+                 GCN_Layer=5, kernel_size=7, dilation=3):          
+        super().__init__()
+        self.graph_learn = TemporalGraphLearning(hidden_dim, dropout=dropout_gcn)
+        self.temporal_conv = TemporalConv(N, T_in, hidden_dim,
+                                          kernel_size=kernel_size,  
+                                          dilation=dilation,        
+                                          dropout=dropout_temporal)
+        self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim,
+                                            dropout=dropout_gcn, layers=GCN_Layer)
+        self.forecaster = GlobalLocalForecasting(
+            N=N, T_in=T_in, T_out=T_out,
+            d_model=hidden_dim, dropout=dropout_forecast
+        )
+
+    def forward(self, X):
+        H = self.temporal_conv(X)
+        A = self.graph_learn(H)
+        H = self.dense_gcn(H, A)
+        Y_hat = self.forecaster(X, H)
         return Y_hat, A
