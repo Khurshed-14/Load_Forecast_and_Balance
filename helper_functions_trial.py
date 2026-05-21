@@ -162,31 +162,48 @@ def train_model(
 # Testing function with TensorBoard logging
 def test_model(dataset, model, test_loader, device='cuda', writer=None):
     model.eval()
-    preds, trues = [], []
+    preds_all, trues_all = [], []
 
     with torch.no_grad(), tqdm(test_loader, desc="Testing") as pbar:
         for X, Y in pbar:
             X, Y = X.to(device), Y.to(device)
-            out, _ = model(X)           # <-- unpack tuple, discard A
-            preds.append(out.cpu().numpy())
-            trues.append(Y.cpu().numpy())
+            out, _ = model(X)
+            preds_all.append(out.cpu().numpy())
+            trues_all.append(Y.cpu().numpy())
 
-    preds = np.concatenate(preds, axis=0)
-    trues = np.concatenate(trues, axis=0)
+    preds_flat = np.concatenate(preds_all, axis=0).flatten()
+    trues_flat = np.concatenate(trues_all, axis=0).flatten()
 
-    mse = mean_squared_error(trues, preds)
-    mae = mean_absolute_error(trues, preds)
-    r2 = r2_score(trues, preds)
+    assert preds_flat.shape == trues_flat.shape
+    assert not np.any(np.isnan(preds_flat)), "Predictions contain NaN"
+    assert not np.any(np.isnan(trues_flat)), "Targets contain NaN"
 
-    print(f"\nTest Results:\nMSE = {mse:.4f} | MAE = {mae:.4f} | R² = {r2:.4f}\n")
+    n          = len(preds_flat)
+    n_features = len(dataset.feature_names)
+    target_col = dataset.target_idx   # 0 = demand
+
+    dummy_preds = np.zeros((n, n_features))
+    dummy_trues = np.zeros((n, n_features))
+    dummy_preds[:, target_col] = preds_flat
+    dummy_trues[:, target_col] = trues_flat
+
+    preds_unscaled = dataset.scaler.inverse_transform(dummy_preds)[:, target_col]
+    trues_unscaled = dataset.scaler.inverse_transform(dummy_trues)[:, target_col]
+
+    mse = mean_squared_error(trues_unscaled, preds_unscaled)
+    mae = mean_absolute_error(trues_unscaled, preds_unscaled)
+    r2  = r2_score(trues_unscaled, preds_unscaled)
+
+    print(f"\nTest Results ({n:,} points, unscaled MW):")
+    print(f"MSE = {mse:.4f} | MAE = {mae:.4f} | R² = {r2:.4f}\n")
 
     if writer:
         writer.add_scalar('Test_Metrics/MSE', mse, 1)
         writer.add_scalar('Test_Metrics/MAE', mae, 1)
-        writer.add_scalar('Test_Metrics/R2', r2, 1)
+        writer.add_scalar('Test_Metrics/R2', r2,  1)
         print("Test metrics logged to TensorBoard.")
 
-    return preds, trues
+    return np.concatenate(preds_all, axis=0), np.concatenate(trues_all, axis=0)
 
 def get_cluster_prior(dataset, n_clusters=5):
     """

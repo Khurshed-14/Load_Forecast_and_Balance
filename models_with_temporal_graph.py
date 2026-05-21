@@ -1,18 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import StandardScaler
-from torch.utils.data import Dataset, DataLoader, Subset
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from tqdm import tqdm
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-import math
-from torch.utils.tensorboard import SummaryWriter 
-import json
 
 class TemporalGraphLearning(nn.Module):
     def __init__(self, d_model, dropout=0.1, alpha=0.2):
@@ -37,14 +25,9 @@ class TemporalGraphLearning(nn.Module):
         return A
     
 class TemporalConv(nn.Module):
-    def __init__(self, N, T_in, hidden_dim=64, kernel_size=7, dilation=3, dropout=0.2, layers=3):
+    def __init__(self, N, T_in, hidden_dim=64, kernel_size=7, dilation=3, dropout=0.2):
         super().__init__()
-        
-        self.layers = layers
         self.dropout = nn.Dropout(dropout)
-        self.norms = nn.ModuleList([
-            nn.BatchNorm1d(hidden_dim) for _ in range(layers)
-        ])
         self.dilation = dilation
         
         # Calculate padding to maintain temporal length
