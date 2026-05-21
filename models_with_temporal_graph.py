@@ -25,7 +25,7 @@ class TemporalGraphLearning(nn.Module):
         return A
     
 class TemporalConv(nn.Module):
-    def __init__(self, N, T_in, hidden_dim=64, kernel_size=7, dilation=3, dropout=0.2, layers=3):
+    def __init__(self, N, T_in, hidden_dim=64, kernel_size=7, dilation=3, dropout=0.2):
         super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.dilation = dilation
