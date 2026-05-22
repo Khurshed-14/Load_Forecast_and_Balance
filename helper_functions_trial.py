@@ -259,16 +259,13 @@ def test_model_stepwised(dataset, model, test_loader, device='cuda', writer=None
     target_col = dataset.target_idx   # 0 = demand
 
     # --- A. Calculate SCALED Metrics ---
-    # Step-wise scaled metrics
     mse_scaled_per_step = np.mean((preds_concat - trues_concat)**2, axis=0)
     mae_scaled_per_step = np.mean(np.abs(preds_concat - trues_concat), axis=0)
     
-    # Overall scaled metrics
     overall_mse_scaled = mean_squared_error(trues_concat.flatten(), preds_concat.flatten())
     overall_mae_scaled = mean_absolute_error(trues_concat.flatten(), preds_concat.flatten())
 
     # --- B. Calculate UNSCALED Metrics ---
-    # We flatten temporarily just to use your existing dummy array logic, then reshape back
     preds_flat = preds_concat.flatten()
     trues_flat = trues_concat.flatten()
 
@@ -281,15 +278,12 @@ def test_model_stepwised(dataset, model, test_loader, device='cuda', writer=None
     preds_unscaled_flat = dataset.scaler.inverse_transform(dummy_preds)[:, target_col]
     trues_unscaled_flat = dataset.scaler.inverse_transform(dummy_trues)[:, target_col]
 
-    # Reshape back to (Samples, 240)
     preds_unscaled = preds_unscaled_flat.reshape(N_samples, T_out)
     trues_unscaled = trues_unscaled_flat.reshape(N_samples, T_out)
 
-    # Step-wise unscaled metrics
     mse_per_step = np.mean((preds_unscaled - trues_unscaled)**2, axis=0)
     mae_per_step = np.mean(np.abs(preds_unscaled - trues_unscaled), axis=0)
 
-    # Overall unscaled metrics
     overall_mse = mean_squared_error(trues_unscaled_flat, preds_unscaled_flat)
     overall_mae = mean_absolute_error(trues_unscaled_flat, preds_unscaled_flat)
 
@@ -298,8 +292,7 @@ def test_model_stepwised(dataset, model, test_loader, device='cuda', writer=None
     print(f"[Scaled]   Overall MSE = {overall_mse_scaled:.4f} | Overall MAE = {overall_mae_scaled:.4f}")
     print(f"[Unscaled] Overall MSE = {overall_mse:.4f} | Overall MAE = {overall_mae:.4f} (MW)")
 
-    # Print the specific steps requested by the reviewer
-    steps_to_report = [60, 120, 180, 240]  # Reviewer requested steps
+    steps_to_report = [60, 120, 180, 240]  
     print("\n--- Error Decomposition at Specific Steps ---")
     for step in steps_to_report:
         idx = step - 1
@@ -307,31 +300,46 @@ def test_model_stepwised(dataset, model, test_loader, device='cuda', writer=None
         print(f"  Scaled   -> MSE = {mse_scaled_per_step[idx]:.4f} | MAE = {mae_scaled_per_step[idx]:.4f}")
         print(f"  Unscaled -> MSE = {mse_per_step[idx]:.4f} | MAE = {mae_per_step[idx]:.4f}")
 
-    # --- D. Plot the "Prediction Step vs. Error" curve (Using Unscaled) ---
+    # --- D. Plot the "Prediction Step vs. Error" curves (Side-by-Side) ---
     steps_axis = np.arange(1, T_out + 1)
     
-    fig, ax1 = plt.subplots(figsize=(10, 5))
+    fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(15, 5))
 
-    color = 'tab:red'
+    color_mse = 'tab:red'
+    color_mae = 'tab:blue'
+
+    # 1. Unscaled Plot (Left)
     ax1.set_xlabel('Prediction Step (Horizon)')
-    ax1.set_ylabel('MSE (Unscaled)', color=color)
-    ax1.plot(steps_axis, mse_per_step, color=color, label='MSE')
-    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_ylabel('MSE (Unscaled)', color=color_mse)
+    ax1.plot(steps_axis, mse_per_step, color=color_mse, label='MSE')
+    ax1.tick_params(axis='y', labelcolor=color_mse)
 
     ax2 = ax1.twinx()  
-    color = 'tab:blue'
-    ax2.set_ylabel('MAE (Unscaled)', color=color)  
-    ax2.plot(steps_axis, mae_per_step, color=color, label='MAE', linestyle='--')
-    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.set_ylabel('MAE (Unscaled)', color=color_mae)  
+    ax2.plot(steps_axis, mae_per_step, color=color_mae, label='MAE', linestyle='--')
+    ax2.tick_params(axis='y', labelcolor=color_mae)
+    ax1.set_title('Unscaled Error Evolution')
 
-    # Highlight the specific steps the reviewer asked for
+    # 2. Scaled Plot (Right)
+    ax3.set_xlabel('Prediction Step (Horizon)')
+    ax3.set_ylabel('MSE (Scaled)', color=color_mse)
+    ax3.plot(steps_axis, mse_scaled_per_step, color=color_mse, label='MSE')
+    ax3.tick_params(axis='y', labelcolor=color_mse)
+
+    ax4 = ax3.twinx()
+    ax4.set_ylabel('MAE (Scaled)', color=color_mae)
+    ax4.plot(steps_axis, mae_scaled_per_step, color=color_mae, label='MAE', linestyle='--')
+    ax4.tick_params(axis='y', labelcolor=color_mae)
+    ax3.set_title('Scaled Error Evolution')
+
+    # Highlight the specific steps on both plots
     for step in steps_to_report:
         ax1.axvline(x=step, color='gray', linestyle=':', alpha=0.6)
+        ax3.axvline(x=step, color='gray', linestyle=':', alpha=0.6)
 
     fig.tight_layout()  
-    plt.title('Prediction Step vs. Error Evolution')
     plt.savefig(save_plot_path, dpi=300)
     plt.show()
-    print(f"\nPlot saved to {save_plot_path}")
+    print(f"\nPlots saved to {save_plot_path}")
 
     return preds_concat, trues_concat, mse_per_step, mae_per_step
