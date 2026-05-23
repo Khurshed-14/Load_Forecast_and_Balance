@@ -1,18 +1,52 @@
-load/
-Short-Term Aggregated Residential LoadForecasting using BiLSTM and CNN-BiLSTM/data/
-GCN/
-load_venv/
-Models/
-runs/
+# Python
 __pycache__/
-CSE498R_Supervisor_Fixes/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+load_venv/
+env/
+
+# Environment and secrets
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PyTorch / TensorBoard run outputs (repo root and notebooks)
+runs/
+**/Sensitivity_Analysis/
+**/Sensitivity_Analysis_SH/
+
+# Training experiment output directories (historical naming)
 Final_Metrics/
 Final_Metrics_with_raw_data/
 Final_Run/
 Paper_Run/
 Paper_Runs/
 Test_Metrics/
+Trial_Run/
 TR_GNN_AT/
 TR_GNN_ISO_NE/
-Trial_Run/
+CSE498R_Supervisor_Fixes/
+
+# Ad-hoc output folders
+load/
 load_new/
+GCN/
+
+# Checkpoints saved at repo root by training notebooks
+/Models/
+
+# Replication project local data (if downloaded separately)
+replications/bilstm_cnn_bilstm/data/
