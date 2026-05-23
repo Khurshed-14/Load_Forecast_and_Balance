@@ -2,8 +2,6 @@
 
 Replication and experimentation for **GLFN-TC** (Graph Learning + Feature Network with Temporal Convolution): short-term load forecasting on multiple public datasets, with sensitivity analysis and baseline comparisons.
 
-This documentation applies to the **`replicated/glfn-tc`** branch.
-
 ## Repository layout
 
 ```
@@ -100,13 +98,6 @@ python -m ipykernel install --user --name load-forecast --display-name "Load For
 - **`Baseline Metrics/`** — CSV metrics for baseline models (train/validation and test splits) on AT, ISO-NE, and SH.
 - **`replications/bilstm_cnn_bilstm/`** — Independent replication of *Short-Term Aggregated Residential Load Forecasting using BiLSTM and CNN-BiLSTM*; not part of the GLFN-TC pipeline.
 - **`external/ResNetPlus_ISONE.py`** — External Keras baseline for ISO-NE (reference only).
-
-## Branch context
-
-| Branch | Focus |
-|--------|--------|
-| `main` | Primary project line |
-| **`replicated/glfn-tc`** | GLFN-TC replication, reorganized `data/` and `notebooks/`, sensitivity runs, baseline metrics |
 
 ## Git ignore policy
 
