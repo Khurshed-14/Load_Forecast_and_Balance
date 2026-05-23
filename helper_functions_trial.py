@@ -238,7 +238,7 @@ def get_cluster_prior(dataset, n_clusters=5):
     return torch.FloatTensor(prior_adj)
 
 
-def test_model_stepwised(dataset, model, test_loader, device='cuda', writer=None, save_plot_path="stepwise_error.png"):
+def test_model_stepwise(dataset, model, test_loader, device='cuda', writer=None, save_plot_path="stepwise_error.png"):
     model.eval()
     preds_all, trues_all = [], []
 
