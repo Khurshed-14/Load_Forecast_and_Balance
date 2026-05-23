@@ -178,7 +178,11 @@ def test_model(dataset, model, test_loader, device='cuda', writer=None):
     assert preds_flat.shape == trues_flat.shape
     assert not np.any(np.isnan(preds_flat)), "Predictions contain NaN"
     assert not np.any(np.isnan(trues_flat)), "Targets contain NaN"
-
+    
+    mse_scaled = mean_squared_error(trues_flat, preds_flat)
+    mae_scaled = mean_absolute_error(trues_flat, preds_flat)
+    r2_scaled  = r2_score(trues_flat, preds_flat)
+    
     n          = len(preds_flat)
     n_features = len(dataset.feature_names)
     target_col = dataset.target_idx   # 0 = demand
@@ -196,8 +200,9 @@ def test_model(dataset, model, test_loader, device='cuda', writer=None):
     r2  = r2_score(trues_unscaled, preds_unscaled)
 
     print(f"\nTest Results ({n:,} points, unscaled MW):")
-    print(f"MSE = {mse:.4f} | MAE = {mae:.4f} | R² = {r2:.4f}\n")
-
+    print(f"Scaled Metrics:   MSE = {mse_scaled:.4f} | MAE = {mae_scaled:.4f} | R² = {r2_scaled:.4f}")
+    print(f"Unscaled (MW):    MSE = {mse:.4f} | MAE = {mae:.4f} | R² = {r2:.4f}\n")
+    
     if writer:
         writer.add_scalar('Test_Metrics/MSE', mse, 1)
         writer.add_scalar('Test_Metrics/MAE', mae, 1)
