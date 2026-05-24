@@ -39,7 +39,8 @@ Trial_Run/
 TR_GNN_AT/
 TR_GNN_ISO_NE/
 CSE498R_Supervisor_Fixes/
-
+Sens_Runs/
+TR_GNN_SH/
 # Ad-hoc output folders
 load/
 load_new/
