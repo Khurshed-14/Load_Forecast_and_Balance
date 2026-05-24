@@ -45,6 +45,7 @@ TR_GNN_SH/
 load/
 load_new/
 GCN/
+TR_GNN_AT_Sens/
 
 # Checkpoints saved at repo root by training notebooks
 /Models/

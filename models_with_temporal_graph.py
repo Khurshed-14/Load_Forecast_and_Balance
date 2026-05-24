@@ -250,7 +250,7 @@ class GlobalLocalForecasting(nn.Module):
         return trend + global_pred + local_pred
     
 
-class GLFN_TC_Linear(nn.Module):
+class TR_GNN_Linear(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5,dilation=3,kernel_size=7):
         super().__init__()
@@ -282,7 +282,7 @@ class GLFN_TC_Linear(nn.Module):
         return Y_hat, A
 
 
-class GLFN_TC_Attention(nn.Module):
+class TR_GNN_Attention(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
                  GCN_Layer=5, kernel_size=7, dilation=3):          
@@ -307,7 +307,7 @@ class GLFN_TC_Attention(nn.Module):
         return Y_hat, A
 
 
-class GLFN_TC_MultiScale(nn.Module):
+class TR_GNN_MultiScale(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
                  GCN_Layer=5, kernel_size=7, dilation=3):          
@@ -332,7 +332,7 @@ class GLFN_TC_MultiScale(nn.Module):
         return Y_hat, A
 
 
-class GLFN_TC_GlobalLocal(nn.Module):
+class TR_GNN_GlobalLocal(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
                  GCN_Layer=5, kernel_size=7, dilation=3):          

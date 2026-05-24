@@ -433,7 +433,7 @@ class GlobalLocalForecasting(nn.Module):
         # --- Combine ---
         return trend + global_pred + local_pred
     
-# class GLFN_TC_Linear(nn.Module):
+# class TR_GNN_Linear(nn.Module):
 #     """
 #     Graph Learning + Temporal Convolution + Dense Residual GCN + Dropout regularization.
 #     """
@@ -458,7 +458,7 @@ class GlobalLocalForecasting(nn.Module):
 #         Y_hat = self.forecaster(H)
 #         return Y_hat
 
-class GLFN_TC_Linear(nn.Module):
+class TR_GNN_Linear(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
         super().__init__()
@@ -490,7 +490,7 @@ class GLFN_TC_Linear(nn.Module):
         return Y_hat
 
 
-class GLFN_TC_Attention(nn.Module):
+class TR_GNN_Attention(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
         super().__init__()
@@ -517,7 +517,7 @@ class GLFN_TC_Attention(nn.Module):
         Y_hat = self.forecaster(X, H) # Pass Raw X + Hidden H
         return Y_hat
     
-class GLFN_TC_GraphGRU(nn.Module):
+class TR_GNN_GraphGRU(nn.Module):
     """
     Graph Learning + Temporal Convolution + Dense Residual GCN + Dropout regularization.
     """
@@ -542,7 +542,7 @@ class GLFN_TC_GraphGRU(nn.Module):
         Y_hat = self.forecaster(H, A)
         return Y_hat
     
-# class GLFN_TC_MultiScale(nn.Module):
+# class TR_GNN_MultiScale(nn.Module):
 #     """
 #     Graph Learning + Temporal Convolution + Dense Residual GCN + Dropout regularization.
 #     """
@@ -567,7 +567,7 @@ class GLFN_TC_GraphGRU(nn.Module):
 #         Y_hat = self.forecaster(H)
 #         return Y_hat
     
-class GLFN_TC_MultiScale(nn.Module):
+class TR_GNN_MultiScale(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64, 
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3, GCN_Layer=5):
         super().__init__()
@@ -608,7 +608,7 @@ class GLFN_TC_MultiScale(nn.Module):
         
         return Y_hat
     
-# class GLFN_TC_Attention(nn.Module):
+# class TR_GNN_Attention(nn.Module):
 #     """
 #     Graph Learning + Temporal Convolution + Dense Residual GCN + Dropout regularization.
 #     """
@@ -633,7 +633,7 @@ class GLFN_TC_MultiScale(nn.Module):
 #         Y_hat = self.forecaster(H)
 #         return Y_hat
 
-# class GLFN_TC_GlobalLocal(nn.Module):
+# class TR_GNN_GlobalLocal(nn.Module):
 #     """
 #     Graph Learning + Temporal Convolution + Dense Residual GCN + Dropout regularization.
 #     """
@@ -658,7 +658,7 @@ class GLFN_TC_MultiScale(nn.Module):
 #         Y_hat = self.forecaster(H)
 #         return Y_hat
 
-class GLFN_TC_GlobalLocal(nn.Module):
+class TR_GNN_GlobalLocal(nn.Module):
     """
     Graph Learning + Temporal Convolution + Dense Residual GCN + Global/Local Forecasting
     """
