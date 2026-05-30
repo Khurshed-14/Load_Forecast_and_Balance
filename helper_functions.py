@@ -8,20 +8,53 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
+from debug_probes import diagonal_ratio
 
 
 def validate(model, loader, criterion, device):
     model.eval()
     total_loss = 0.0
+    diag_ratios = []
     with torch.no_grad(), tqdm(loader, desc="Validating", leave=False) as pbar:
         for X, Y in pbar:
             X, Y = X.to(device), Y.to(device)
-            pred, _ = model(X)      # <-- unpack tuple, discard A
+            pred, A = model(X)
             loss = criterion(pred, Y)
             total_loss += loss.item()
-    return total_loss / len(loader)
+            diag_ratios.append(diagonal_ratio(A))
+    avg_ratio = sum(diag_ratios) / len(diag_ratios) if diag_ratios else float("nan")
+    return total_loss / len(loader), avg_ratio
 
-# Training function with TensorBoard logging
+def _sparse_offdiag_loss(A):
+    """L1 on off-diagonal entries only."""
+    B, N, _ = A.shape
+    mask = ~torch.eye(N, device=A.device, dtype=torch.bool)
+    return A[:, mask].abs().mean()
+
+
+def _log_adjacency_wandb(model, X_batch, wandb_run, epoch, feature_names=None):
+    import wandb
+    from debug_probes import plot_adjacency_heatmap
+
+    model.eval()
+    with torch.no_grad():
+        _, A = model(X_batch)
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        tmp_path = tmp.name
+    plot_adjacency_heatmap(
+        A,
+        feature_names,
+        f"Learned Graph Adjacency Matrix (A) — epoch {epoch}",
+        tmp_path,
+    )
+    wandb_run.log({"adjacency": wandb.Image(tmp_path)}, step=epoch)
+    os.remove(tmp_path)
+    model.train()
+
+
+# Training function — wandb or optional TensorBoard writer
 def train_model(
     model,
     train_loader,
@@ -34,9 +67,12 @@ def train_model(
     scheduler_factor=0.5,
     save_path="ISO_NE_Small_Dataset_Run2",
     writer=None,
+    wandb_run=None,
     weight_decay=1e-5,
-    lambda_smooth=0.01,     # <-- L2 temporal consistency weight
-    lambda_sparse=1e-4,     # <-- L1 sparsity weight (optional, kept from before)
+    lambda_smooth=0.0,
+    lambda_sparse=0.0,
+    lambda_entropy=0.0,
+    feature_names=None,
 ):
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -71,18 +107,26 @@ def train_model(
 
             pred, A = model(X)          # <-- unpack (Y_hat, A)
 
-            # 1. Task loss
             mse_loss = criterion(pred, Y)
 
-            # 2. Temporal consistency: L2 penalty between adjacent time window graphs
-            #    A: (B, N, N) — consecutive samples = consecutive time windows
-            #    Encourages smooth graph evolution without freezing it
-            smooth_loss = nn.functional.mse_loss(A[:-1], A[1:].detach())
+            smooth_loss = torch.tensor(0.0, device=device)
+            if lambda_smooth > 0 and A.size(0) > 1:
+                smooth_loss = nn.functional.mse_loss(A[:-1], A[1:].detach())
 
-            # 3. Sparsity: L1 penalty to keep graph sparse (optional but useful)
-            sparse_loss = torch.norm(A, p=1)
+            sparse_loss = torch.tensor(0.0, device=device)
+            if lambda_sparse > 0:
+                sparse_loss = _sparse_offdiag_loss(A)
 
-            loss = mse_loss + lambda_smooth * smooth_loss + lambda_sparse * sparse_loss
+            entropy_loss = torch.tensor(0.0, device=device)
+            if lambda_entropy > 0:
+                entropy_loss = -(A * (A + 1e-8).log()).sum(dim=-1).mean()
+
+            loss = (
+                mse_loss
+                + lambda_smooth * smooth_loss
+                + lambda_sparse * sparse_loss
+                - lambda_entropy * entropy_loss
+            )
 
             optimizer.zero_grad()
             loss.backward()
@@ -96,7 +140,7 @@ def train_model(
             )
 
         avg_train_loss = total_loss / len(train_loader)
-        val_loss = validate(model, val_loader, criterion, device)
+        val_loss, val_diag_ratio = validate(model, val_loader, criterion, device)
 
         train_history.append(avg_train_loss)
         val_history.append(val_loss)
@@ -104,13 +148,29 @@ def train_model(
         scheduler.step(val_loss)
         current_lr = optimizer.param_groups[0]['lr']
 
-        writer.add_scalar('Loss/train', avg_train_loss, epoch)
-        writer.add_scalar('Loss/validation', val_loss, epoch)
-        writer.add_scalar('LearningRate', current_lr, epoch)
+        if writer is not None:
+            writer.add_scalar('Loss/train', avg_train_loss, epoch)
+            writer.add_scalar('Loss/validation', val_loss, epoch)
+            writer.add_scalar('LearningRate', current_lr, epoch)
+            writer.add_scalar('diagonal_ratio', val_diag_ratio, epoch)
+
+        if wandb_run is not None:
+            wandb_run.log({
+                "loss/train": avg_train_loss,
+                "loss/val": val_loss,
+                "diagonal_ratio": val_diag_ratio,
+                "lr": current_lr,
+            }, step=epoch)
+            if epoch % 5 == 0:
+                X_log, _ = next(iter(val_loader))
+                _log_adjacency_wandb(
+                    model, X_log.to(device), wandb_run, epoch, feature_names=feature_names
+                )
 
         print(
             f"Epoch {epoch:03d} | "
-            f"Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | LR: {current_lr:.6f}"
+            f"Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | "
+            f"diag_ratio: {val_diag_ratio:.2f} | LR: {current_lr:.6f}"
         )
 
         if val_loss < best_val_loss:
@@ -156,7 +216,10 @@ def train_model(
     plt.savefig(save_path + "_learning_curve.png", dpi=200)
     plt.close()
 
-    print("Training complete. TensorBoard logs saved.")
+    if writer is not None:
+        print("Training complete. TensorBoard logs saved.")
+    else:
+        print("Training complete.")
     return model
 
 
@@ -210,6 +273,24 @@ def test_model(dataset, model, test_loader, device='cuda', writer=None):
         print("Test metrics logged to TensorBoard.")
 
     return np.concatenate(preds_all, axis=0), np.concatenate(trues_all, axis=0)
+
+def build_correlation_priors(df_numeric):
+    """
+    Feature correlation priors for graph learning and legacy-style heatmaps.
+
+    Returns:
+        prior_stoch: (N, N) row-stochastic, nonnegative, for GCN / logit bias.
+        display: (N, N) numpy in [0, 1] with diagonal 1.0 (matches old heatmap scale).
+    """
+    corr = df_numeric.corr().fillna(0.0).values.astype(np.float32)
+    # [0, 1] with diagonal 1.0 — same scale as the legacy adjacency heatmap
+    display = np.clip((corr + 1.0) * 0.5, 0.0, 1.0)
+    np.fill_diagonal(display, 1.0)
+
+    row_sum = display.sum(axis=1, keepdims=True)
+    prior_stoch = display / np.maximum(row_sum, 1e-8)
+    return torch.from_numpy(prior_stoch.astype(np.float32)), display
+
 
 def get_cluster_prior(dataset, n_clusters=5):
     """
@@ -344,7 +425,7 @@ def test_model_stepwise(dataset, model, test_loader, device='cuda', writer=None,
 
     fig.tight_layout()  
     plt.savefig(save_plot_path, dpi=300)
-    plt.show()
+    plt.close(fig)
     print(f"\nPlots saved to {save_plot_path}")
 
     return preds_concat, trues_concat, mse_per_step, mae_per_step

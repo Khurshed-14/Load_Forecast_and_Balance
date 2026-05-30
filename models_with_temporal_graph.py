@@ -3,24 +3,50 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class TemporalGraphLearning(nn.Module):
-    def __init__(self, d_model, dropout=0.1, alpha=0.2):
+    def __init__(
+        self,
+        d_model,
+        dropout=0.1,
+        alpha=0.2,
+        add_identity=True,
+        use_lrelu=True,
+        scale_exp=-0.5,
+        corr_prior=None,
+        corr_prior_strength=2.5,
+    ):
         super().__init__()
         self.d_model = d_model
-        self.scale = d_model ** -0.5
+        self.scale_exp = scale_exp
+        self.scale = d_model ** scale_exp  # Fix 2: use -0.25 for softer attention
+        self.add_identity = add_identity
+        self.corr_prior_strength = float(corr_prior_strength)
         self.W_q = nn.Linear(d_model, d_model)
         self.W_k = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
-        self.leaky_relu = nn.LeakyReLU(alpha)
+        self.leaky_relu = nn.LeakyReLU(alpha) if use_lrelu else None
+        if corr_prior is not None:
+            self.register_buffer("corr_prior", corr_prior)  # (N, N) row-stochastic
+        else:
+            self.corr_prior = None
+
+    def _bias_scores_with_corr_prior(self, scores: torch.Tensor) -> torch.Tensor:
+        if self.corr_prior is None:
+            return scores
+        log_prior = torch.log(self.corr_prior.clamp(min=1e-8)).unsqueeze(0)  # (1, N, N)
+        return scores + self.corr_prior_strength * log_prior  # (B, N, N)
 
     def forward(self, H):
-        Q = self.W_q(H)
-        K = self.W_k(H)
-        scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-        scores = self.leaky_relu(scores)
-        A = F.softmax(scores, dim=-1)
-        I = torch.eye(A.size(1), device=A.device).unsqueeze(0)
-        A = A + I
-        A = A / A.sum(dim=-1, keepdim=True).clamp(min=1e-8)
+        Q = self.W_q(H)  # (B, N, d)
+        K = self.W_k(H)  # (B, N, d)
+        scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # (B, N, N)
+        if self.leaky_relu is not None:
+            scores = self.leaky_relu(scores)
+        scores = self._bias_scores_with_corr_prior(scores)  # (B, N, N)
+        A = F.softmax(scores, dim=-1)  # (B, N, N)
+        if self.add_identity:
+            I = torch.eye(A.size(1), device=A.device).unsqueeze(0)
+            A = A + I
+            A = A / A.sum(dim=-1, keepdim=True).clamp(min=1e-8)
         A = self.dropout(A)
         return A
     
@@ -310,13 +336,25 @@ class TR_GNN_Attention(nn.Module):
 class TR_GNN_MultiScale(nn.Module):
     def __init__(self, N, T_in, T_out, d=32, hidden_dim=64,
                  dropout_temporal=0.2, dropout_gcn=0.3, dropout_forecast=0.3,
-                 GCN_Layer=5, kernel_size=7, dilation=3):          
+                 GCN_Layer=5, kernel_size=7, dilation=3,
+                 fix_no_identity=False, fix_no_lrelu=False,
+                 fix_soft_temperature=False,
+                 corr_prior=None,
+                 corr_prior_strength=2.5):
         super().__init__()
         self.temporal_conv = TemporalConv(N, T_in, hidden_dim,
                                           kernel_size=kernel_size,  
                                           dilation=dilation,        
                                           dropout=dropout_temporal)
-        self.graph_learn = TemporalGraphLearning(hidden_dim, dropout=dropout_gcn)
+        self.graph_learn = TemporalGraphLearning(
+            hidden_dim,
+            dropout=dropout_gcn,
+            add_identity=not fix_no_identity,
+            use_lrelu=not fix_no_lrelu,
+            scale_exp=-0.25 if fix_soft_temperature else -0.5,
+            corr_prior=corr_prior,
+            corr_prior_strength=corr_prior_strength,
+        )
         self.dense_gcn = DenselyResidualGCN(hidden_dim, hidden_dim,
                                             dropout=dropout_gcn, layers=GCN_Layer)
         self.forecaster = MultiScaleForecasting(

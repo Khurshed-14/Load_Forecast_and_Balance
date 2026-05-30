@@ -23,8 +23,17 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
-# PyTorch / TensorBoard run outputs (repo root and notebooks)
+# TensorBoard / wandb (ephemeral; commit models/plots under Runs/ instead)
 runs/
+wandb/
+
+# Training logs
+training_run.log
+
+# Local datasets (too large for git; main.py expects CSV at repo root)
+data/
+selected_data_ISONE.csv
+
 **/Sensitivity_Analysis/
 **/Sensitivity_Analysis_SH/
 
